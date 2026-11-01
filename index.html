@@ -13,8 +13,15 @@
 	--line: #cfcfcb;
 	--accent: #2b5fd9;
 }
+:root[data-theme="dark"] {
+	--bg: #16181a;
+	--fg: #e4e4e0;
+	--dim: #8a8d90;
+	--line: #34383b;
+	--accent: #7ba4ff;
+}
 @media (prefers-color-scheme: dark) {
-	:root {
+	:root:not([data-theme="light"]) {
 		--bg: #16181a;
 		--fg: #e4e4e0;
 		--dim: #8a8d90;
@@ -47,7 +54,7 @@ video {
 	transform: scaleX(-1);
 }
 video.back { transform: none; }
-#msg {
+#msg, #count {
 	position: absolute;
 	inset: 0;
 	display: flex;
@@ -55,9 +62,26 @@ video.back { transform: none; }
 	justify-content: center;
 	padding: 1rem;
 	text-align: center;
-	color: #bbb;
 }
-#msg:empty { display: none; }
+#msg { color: #bbb; }
+#count {
+	color: #fff;
+	font-size: 6rem;
+	text-shadow: 0 0 12px rgba(0, 0, 0, .6);
+	pointer-events: none;
+}
+#msg:empty, #count:empty { display: none; }
+
+#light {
+	position: fixed;
+	inset: 0;
+	z-index: 10;
+	background: #fff;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity .15s;
+}
+#light.on { opacity: 1; }
 
 .bar {
 	display: flex;
@@ -80,9 +104,11 @@ button:focus-visible, select:focus-visible, a:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 }
+option { background: var(--bg); color: var(--fg); }
+#flash[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 #snap { border-color: var(--accent); color: var(--accent); }
 #snap:hover:not(:disabled) { border-color: var(--accent); }
-#wipe { margin-left: auto; }
+#theme { margin-left: auto; }
 #note { color: var(--dim); font-size: .875rem; margin: 0 0 2rem; min-height: 1.5em; }
 
 #shots {
@@ -104,18 +130,28 @@ button:focus-visible, select:focus-visible, a:focus-visible {
 </style>
 </head>
 <body>
+<div id="light"></div>
 <main>
 	<h1>camera</h1>
 
 	<div id="stage">
 		<video id="video" autoplay playsinline muted></video>
 		<div id="msg">Camera is off.</div>
+		<div id="count"></div>
 	</div>
 
 	<div class="bar">
 		<button id="toggle">Start camera</button>
 		<select id="cams" hidden></select>
+		<select id="delay" aria-label="Timer">
+			<option value="0">Timer off</option>
+			<option value="3">3 s</option>
+			<option value="5">5 s</option>
+			<option value="10">10 s</option>
+		</select>
+		<button id="flash" aria-pressed="false">Flash: off</button>
 		<button id="snap" disabled>Take photo</button>
+		<button id="theme">Theme: auto</button>
 		<button id="wipe">Delete all</button>
 	</div>
 	<p id="note"></p>
@@ -126,18 +162,31 @@ button:focus-visible, select:focus-visible, a:focus-visible {
 <script>
 const video = document.getElementById('video');
 const msg = document.getElementById('msg');
+const count = document.getElementById('count');
+const light = document.getElementById('light');
 const note = document.getElementById('note');
 const toggle = document.getElementById('toggle');
 const snap = document.getElementById('snap');
+const flash = document.getElementById('flash');
+const delay = document.getElementById('delay');
+const theme = document.getElementById('theme');
 const wipe = document.getElementById('wipe');
 const cams = document.getElementById('cams');
 const shots = document.getElementById('shots');
 
+const modes = ['auto', 'light', 'dark'];
+
 let stream = null;
 let db = null;
 let asked = false;
+let flashOn = false;
+let pending = false;
+let cancelled = false;
+let mode = 'auto';
 
 function pad(n) { return String(n).padStart(2, '0'); }
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function stamp(t) {
 	const d = new Date(t);
@@ -153,6 +202,15 @@ function explain(err) {
 	case 'NotReadableError': return 'Camera is in use by another app.';
 	default: return err.message || 'Could not open the camera.';
 	}
+}
+
+/* theme */
+
+function applyTheme() {
+	const root = document.documentElement;
+	if (mode === 'auto') root.removeAttribute('data-theme');
+	else root.dataset.theme = mode;
+	theme.textContent = 'Theme: ' + mode;
 }
 
 /* storage */
@@ -225,6 +283,7 @@ async function start(id) {
 
 function stop() {
 	if (!stream) return;
+	cancelled = true;
 	stream.getTracks().forEach(t => t.stop());
 	stream = null;
 	video.srcObject = null;
@@ -254,6 +313,34 @@ function take() {
 		}
 		add(blob, id, time);
 	}, 'image/jpeg', 0.92);
+}
+
+// countdown, optional flash, then take(). calling it again mid-countdown cancels.
+async function shoot() {
+	if (pending) {
+		cancelled = true;
+		return;
+	}
+	if (!stream) return;
+	pending = true;
+	cancelled = false;
+	snap.textContent = 'Cancel';
+
+	for (let n = Number(delay.value); n > 0 && !cancelled; n--) {
+		count.textContent = n;
+		await wait(1000);
+	}
+	count.textContent = '';
+
+	if (!cancelled && flashOn) {
+		light.classList.add('on');
+		await wait(450);
+	}
+	if (!cancelled) take();
+
+	light.classList.remove('on');
+	snap.textContent = 'Take photo';
+	pending = false;
 }
 
 function add(blob, id, time) {
@@ -305,17 +392,35 @@ async function wipeAll() {
 }
 
 toggle.onclick = () => (stream ? stop() : start());
-snap.onclick = take;
+snap.onclick = shoot;
 wipe.onclick = wipeAll;
 cams.onchange = () => start(cams.value);
 addEventListener('pagehide', stop);
 
+flash.onclick = () => {
+	flashOn = !flashOn;
+	flash.setAttribute('aria-pressed', flashOn);
+	flash.textContent = 'Flash: ' + (flashOn ? 'on' : 'off');
+};
+
+theme.onclick = () => {
+	mode = modes[(modes.indexOf(mode) + 1) % modes.length];
+	try { localStorage.setItem('theme', mode); } catch (e) {}
+	applyTheme();
+};
+
 document.addEventListener('keydown', e => {
 	if (e.code === 'Space' && e.target === document.body) {
 		e.preventDefault();
-		take();
+		shoot();
 	}
 });
+
+try {
+	const saved = localStorage.getItem('theme');
+	if (modes.includes(saved)) mode = saved;
+} catch (e) {}
+applyTheme();
 
 (async () => {
 	try {
