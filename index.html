@@ -436,7 +436,7 @@ let db = null;
 let asked = false;
 let ids = [];
 let step = 0;
-let poses = 4;
+let poses = 1;
 let flashOn = false;
 let pending = false;
 let cancelled = false;
@@ -469,7 +469,7 @@ function explain(err) {
 }
 
 function labels() {
-	posesKey.textContent = poses === 1 ? '1 poses' : '4 pose';
+	posesKey.textContent = poses === 1 ? '1 pose' : '4 poses';
 	timer.textContent = delays[step] ? 'timer ' + delays[step] + 's' : 'timer off';
 	flash.textContent = 'flash ' + (flashOn ? 'on' : 'off');
 }
@@ -928,7 +928,7 @@ wipe.onclick = wipeAll;
 addEventListener('pagehide', stop);
 
 posesKey.onclick = () => {
-	poses = poses === 4 ? 1 : 4;
+	poses = poses === 1 ? 4 : 1;
 	labels();
 };
 
