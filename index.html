@@ -469,7 +469,7 @@ function explain(err) {
 }
 
 function labels() {
-	posesKey.textContent = poses === 4 ? '4 poses' : '1 pose';
+	posesKey.textContent = poses === 1 ? '4 poses' : '1 pose';
 	timer.textContent = delays[step] ? 'timer ' + delays[step] + 's' : 'timer off';
 	flash.textContent = 'flash ' + (flashOn ? 'on' : 'off');
 }
