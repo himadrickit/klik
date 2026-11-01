@@ -7,33 +7,48 @@
 <title>klik</title>
 <style>
 :root {
-	--bg: #d8d3c8;
-	--fg: #1d1d1b;
-	--dim: #6d6a62;
-	--red: #e0392e;
+	--bg: #ebe2cc;
+	--hi: #f7f1e1;
+	--fg: #2a2722;
+	--dim: #7a7160;
+	--line: #c5b99d;
+	--red: #cc3a2b;
 }
 :root[data-theme="dark"] {
-	--bg: #131313;
-	--fg: #e2e0da;
-	--dim: #8b8984;
+	--bg: #221e18;
+	--hi: #2d2820;
+	--fg: #eae2cf;
+	--dim: #a39a85;
+	--line: #4a4437;
 }
 @media (prefers-color-scheme: dark) {
 	:root:not([data-theme="light"]) {
-		--bg: #131313;
-		--fg: #e2e0da;
-		--dim: #8b8984;
+		--bg: #221e18;
+		--hi: #2d2820;
+		--fg: #eae2cf;
+		--dim: #a39a85;
+		--line: #4a4437;
 	}
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
 	margin: 0;
-	background: var(--bg);
+	background: radial-gradient(120% 80% at 50% 0%, var(--hi), var(--bg)) fixed, var(--bg);
 	color: var(--fg);
 	font: 16px/1.5 system-ui, sans-serif;
 }
+#grain {
+	position: fixed;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 9;
+	pointer-events: none;
+	mix-blend-mode: multiply;
+}
 button { font: inherit; cursor: pointer; }
-button:focus-visible, a:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+button:focus-visible, a:focus-visible, img:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
 /* first screen: just the camera */
 #top {
@@ -45,52 +60,31 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--red); outline-o
 	padding: 1rem 1rem 2rem;
 }
 #cam {
-	width: max(18rem, min(100%, 80rem, calc((100vh - 17rem) * 1.7778 + 2rem)));
-	padding: 0 1rem 1rem;
-	background: #1b1b1b;
-	border-radius: 1.1rem;
-	box-shadow: 0 .5rem 0 #0b0b0b, 0 1.2rem 2rem rgba(0, 0, 0, .35);
-	overflow: hidden;
+	width: max(18rem, min(100%, 80rem, calc((100vh - 14.5rem) * 1.7778 + 1.6rem)));
+	font-family: Georgia, 'Iowan Old Style', serif;
 }
-#plate {
-	display: flex;
-	align-items: center;
-	gap: .75rem;
-	margin: 0 -1rem 1rem;
-	padding: .6rem 1rem;
-	background: linear-gradient(#e6e6e3, #b8b8b4);
-	border-bottom: 3px solid #0e0e0e;
-	color: #222;
+#frame {
+	position: relative;
+	padding: .8rem;
+	background: #faf6ea;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 .5rem 1.2rem rgba(0, 0, 0, .18);
 }
-.brand { font: italic 700 1.35rem Georgia, serif; }
-.model { font-size: .65rem; letter-spacing: .12em; text-transform: uppercase; color: #555; }
-#lcd {
-	margin-left: auto;
-	padding: .3rem .5rem;
-	background: #9fb08a;
-	color: #27331f;
-	border-radius: 2px;
-	box-shadow: inset 0 1px 3px rgba(0, 0, 0, .45);
-	font: .75rem/1 ui-monospace, monospace;
-	letter-spacing: .08em;
-	white-space: nowrap;
+#frame::before, #frame::after {
+	content: "";
+	position: absolute;
+	top: -.7rem;
+	width: 5rem;
+	height: 1.4rem;
+	background: rgba(226, 204, 132, .78);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
 }
-#led {
-	width: .6rem;
-	height: .6rem;
-	border-radius: 50%;
-	background: #5a1d19;
-}
-#led.blink { animation: blink .5s steps(1) infinite; background: var(--red); }
-@keyframes blink { 50% { background: #5a1d19; } }
+#frame::before { left: 1.5rem; transform: rotate(-4deg); }
+#frame::after { right: 1.5rem; transform: rotate(3deg); }
 
 #stage {
 	position: relative;
 	aspect-ratio: 16 / 9;
 	background: #000;
-	border: .5rem solid #0a0a0a;
-	border-radius: .5rem;
-	box-shadow: 0 0 0 2px #343434;
 	overflow: hidden;
 }
 video {
@@ -102,22 +96,6 @@ video {
 }
 video.back { transform: none; }
 #stage.blink video { visibility: hidden; }
-#stage.live::after {
-	content: "";
-	position: absolute;
-	inset: 14%;
-	pointer-events: none;
-	opacity: .6;
-	background:
-		linear-gradient(#fff, #fff) top left / 1.2rem 2px no-repeat,
-		linear-gradient(#fff, #fff) top left / 2px 1.2rem no-repeat,
-		linear-gradient(#fff, #fff) top right / 1.2rem 2px no-repeat,
-		linear-gradient(#fff, #fff) top right / 2px 1.2rem no-repeat,
-		linear-gradient(#fff, #fff) bottom left / 1.2rem 2px no-repeat,
-		linear-gradient(#fff, #fff) bottom left / 2px 1.2rem no-repeat,
-		linear-gradient(#fff, #fff) bottom right / 1.2rem 2px no-repeat,
-		linear-gradient(#fff, #fff) bottom right / 2px 1.2rem no-repeat;
-}
 #msg, #count {
 	position: absolute;
 	inset: 0;
@@ -127,7 +105,7 @@ video.back { transform: none; }
 	padding: 1rem;
 	text-align: center;
 }
-#msg { color: #8d8d88; font-style: italic; }
+#msg { color: #8d8d88; pointer-events: none; }
 #count {
 	color: #fff;
 	font-size: clamp(5rem, 14vh, 9rem);
@@ -135,50 +113,79 @@ video.back { transform: none; }
 	pointer-events: none;
 }
 #msg:empty, #count:empty { display: none; }
+#tag {
+	position: absolute;
+	bottom: .6rem;
+	left: .8rem;
+	color: #fff;
+	font-size: .8rem;
+	text-shadow: 0 0 6px rgba(0, 0, 0, .7);
+	pointer-events: none;
+}
 
-#ctrl {
+/* options sit on top of the video */
+#opts {
+	position: absolute;
+	top: .6rem;
+	left: .6rem;
+	z-index: 2;
 	display: flex;
-	align-items: center;
-	gap: .5rem;
+	gap: .4rem;
+}
+.opt {
+	padding: .2rem .6rem;
+	background: #f6f0e0;
+	color: #2a2722;
+	border: 1px solid #cdbf9f;
+	border-radius: 2px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+	font: italic .8rem Georgia, 'Iowan Old Style', serif;
+}
+.opt:hover { background: #fff; }
+.opt[hidden] { display: none; }
+
+/* shutter in the middle, start button at its corner */
+#ctrl {
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	align-items: end;
 	margin-top: 1rem;
 }
+#snap { grid-column: 2; }
+#toggle { height: 18px; width: 18px; border-radius: 100%; background: #62271e; border: 0 ; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .1), 0 0 0 3.2px var(--bg), 0 0 0 4.7px ##6d675c ; padding: 1px; grid-column: 3; justify-self: start; margin-left: .5rem; }
 .key {
-	padding: .5rem .75rem;
-	background: #2c2c2c;
-	color: #cfcfca;
-	border: 0;
-	border-bottom: 3px solid #0d0d0d;
-	border-radius: 4px;
-	font-size: .65rem;
-	letter-spacing: .1em;
-	text-transform: uppercase;
+	padding: .35rem .8rem;
+	background: transparent;
+	color: var(--fg);
+	border: 1px solid var(--fg);
+	border-radius: 2px;
+	font: italic .95rem Georgia, 'Iowan Old Style', serif;
 }
-.key:active { transform: translateY(2px); border-bottom-width: 1px; }
-.key[aria-pressed="true"] { color: #ffd38a; }
+a.key { display: inline-block; text-decoration: none; }
+.key:hover, .key[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 #snap {
-	margin-left: auto;
-	width: 4.6rem;
-	height: 4.6rem;
+	width: 4rem;
+	height: 4rem;
+	margin: 0 5px;
 	background: var(--red);
-	border: .38rem solid #dcdcd8;
+	border: 0;
 	border-radius: 50%;
-	box-shadow: 0 4px 0 #0b0b0b;
+	box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .3), 0 0 0 3px var(--bg), 0 0 0 5px var(--fg);
 }
-#snap:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #0b0b0b; }
-#snap:disabled { background: #6b3430; cursor: default; }
+#snap:active:not(:disabled) { transform: scale(.95); }
+#snap:disabled { opacity: .4; cursor: default; }
 
 #slot {
-	height: .6rem;
-	margin-top: 1.2rem;
-	background: #040404;
-	border-radius: .3rem;
-	box-shadow: inset 0 2px 3px #000, 0 1px 0 rgba(255, 255, 255, .12);
+	height: 0;
+	margin-top: 1.25rem;
+	border-top: 2px dashed var(--fg);
+	opacity: .55;
 }
 
 #more {
 	margin-top: 1.25rem;
 	color: var(--dim);
-	font-size: .875rem;
+	font: italic .95rem Georgia, 'Iowan Old Style', serif;
 	text-decoration: none;
 }
 #more:hover { color: var(--fg); }
@@ -230,6 +237,8 @@ video.back { transform: none; }
 	color: var(--dim);
 	text-decoration: underline;
 }
+.head button[hidden] { display: none; }
+#make { color: var(--red); }
 #note { margin: .25rem 0 1.5rem; color: var(--dim); font-size: .875rem; min-height: 1.5em; }
 
 #shots {
@@ -238,15 +247,70 @@ video.back { transform: none; }
 	gap: 1.75rem 1.25rem;
 }
 .shot {
+	position: relative;
 	padding: .5rem .5rem .4rem;
 	background: #f4f2ec;
 	box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
 }
 .shot:nth-child(odd) { transform: rotate(-1deg); }
 .shot:nth-child(even) { transform: rotate(.8deg); }
-.shot img { width: 100%; display: block; }
+.shot img { width: 100%; display: block; cursor: pointer; }
 .shot div { display: flex; justify-content: space-between; margin-top: .4rem; font-size: .75rem; }
 .shot a, .shot button { color: #3a3a36; font-size: inherit; cursor: pointer; }
+.shot.picked { outline: 3px solid var(--red); outline-offset: 3px; }
+.shot.picked::after {
+	content: "\2713";
+	position: absolute;
+	top: -.7rem;
+	right: -.7rem;
+	width: 1.5rem;
+	height: 1.5rem;
+	background: var(--red);
+	border-radius: 50%;
+	color: #fff;
+	font-size: .9rem;
+	line-height: 1.5rem;
+	text-align: center;
+}
+
+/* collage */
+#lab {
+	max-width: 96vw;
+	max-height: 96vh;
+	padding: 0;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	background: var(--bg);
+	color: var(--fg);
+}
+#lab::backdrop { background: rgba(0, 0, 0, .6); }
+.lab-in {
+	display: flex;
+	gap: 1.5rem;
+	padding: 1.25rem;
+}
+.lab-in canvas {
+	display: block;
+	align-self: center;
+	max-width: 56vw;
+	max-height: 80vh;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+.lab-side { display: flex; flex-direction: column; gap: 1rem; min-width: 10rem; }
+.lab-side h3 { margin: 0; font: italic 700 1.3rem Georgia, serif; }
+.lab-side .row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.lab-side .end { margin-top: auto; }
+.swatch {
+	width: 1.8rem;
+	height: 1.8rem;
+	border: 1px solid var(--line);
+	border-radius: 50%;
+}
+.swatch[aria-pressed="true"] { outline: 2px solid var(--fg); outline-offset: 2px; }
+@media (max-width: 40rem) {
+	.lab-in { flex-direction: column; }
+	.lab-in canvas { max-width: 100%; max-height: 50vh; }
+}
 
 #light {
 	position: fixed;
@@ -263,28 +327,34 @@ video.back { transform: none; }
 <body>
 <div id="light"></div>
 <div id="drop"></div>
+<svg id="grain" aria-hidden="true">
+	<filter id="paper">
+		<feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" stitchTiles="stitch"/>
+		<feColorMatrix values="0 0 0 0 .35  0 0 0 0 .28  0 0 0 0 .18  0 0 0 .22 0"/>
+	</filter>
+	<rect width="100%" height="100%" filter="url(#paper)"/>
+</svg>
 
 <section id="top">
 	<div id="cam">
-		<div id="plate">
-			<span class="brand">klik</span>
-			<span class="model">400</span>
-			<span id="lcd"></span>
-			<span id="led"></span>
-		</div>
-
+		<div id="frame">
 		<div id="stage">
 			<video id="video" autoplay playsinline muted></video>
-			<div id="msg">Lens cap is on.</div>
+			<div id="msg">Camera is off.</div>
 			<div id="count"></div>
+			<div id="tag"></div>
+			<div id="opts">
+				<button class="opt" id="poses"></button>
+				<button class="opt" id="timer"></button>
+				<button class="opt" id="flash"></button>
+				<button class="opt" id="flip" hidden>flip</button>
+			</div>
+		</div>
 		</div>
 
 		<div id="ctrl">
-			<button class="key" id="toggle" aria-pressed="false">Power</button>
-			<button class="key" id="timer">Timer</button>
-			<button class="key" id="flash" aria-pressed="false">Flash</button>
-			<button class="key" id="flip" hidden>Flip</button>
 			<button id="snap" title="Shutter (space)" aria-label="Shutter" disabled></button>
+			<button class="key" id="toggle"></button>
 		</div>
 
 		<div id="slot"></div>
@@ -296,6 +366,7 @@ video.back { transform: none; }
 	<div class="head">
 		<h2>the roll</h2>
 		<div>
+			<button id="make" hidden>collage (0)</button>
 			<button id="theme">desk: auto</button>
 			<button id="wipe">toss the roll</button>
 		</div>
@@ -304,42 +375,80 @@ video.back { transform: none; }
 	<div id="shots"></div>
 </section>
 
+<dialog id="lab">
+	<div class="lab-in">
+		<canvas id="sheet"></canvas>
+		<div class="lab-side">
+			<h3>your collage</h3>
+			<div class="row">
+				<button class="key" data-layout="strip">strip</button>
+				<button class="key" data-layout="grid">grid</button>
+			</div>
+			<div class="row" id="swatches"></div>
+			<div class="row">
+				<button class="key" id="bw" aria-pressed="false">b&amp;w</button>
+			</div>
+			<div class="row end">
+				<a class="key" id="get">save</a>
+				<button class="key" id="shut">close</button>
+			</div>
+		</div>
+	</div>
+</dialog>
+
 <script>
 const video = document.getElementById('video');
 const stage = document.getElementById('stage');
 const msg = document.getElementById('msg');
 const count = document.getElementById('count');
+const tag = document.getElementById('tag');
 const light = document.getElementById('light');
 const drop = document.getElementById('drop');
 const slot = document.getElementById('slot');
-const lcd = document.getElementById('lcd');
-const led = document.getElementById('led');
 const note = document.getElementById('note');
 const toggle = document.getElementById('toggle');
+const posesKey = document.getElementById('poses');
 const timer = document.getElementById('timer');
 const flash = document.getElementById('flash');
 const flip = document.getElementById('flip');
 const snap = document.getElementById('snap');
+const make = document.getElementById('make');
 const theme = document.getElementById('theme');
 const wipe = document.getElementById('wipe');
 const shots = document.getElementById('shots');
+const lab = document.getElementById('lab');
+const sheet = document.getElementById('sheet');
+const swatches = document.getElementById('swatches');
+const bwKey = document.getElementById('bw');
+const get = document.getElementById('get');
 
 const modes = ['auto', 'light', 'dark'];
 const delays = [0, 3, 5, 10];
+const frames = {
+	cream: { bg: '#f4f2ec', fg: '#3a3a36' },
+	black: { bg: '#151515', fg: '#d8d6d0' },
+	red: { bg: '#b8342b', fg: '#f6e8de' },
+	blue: { bg: '#1f3a5f', fg: '#e6ecf4' }
+};
 
 let stream = null;
 let db = null;
 let asked = false;
 let ids = [];
 let step = 0;
+let poses = 4;
 let flashOn = false;
 let pending = false;
 let cancelled = false;
 let mode = 'auto';
 let audio = null;
 let sayTimer = 0;
+let bmps = [];
+let sheetUrl = '';
+let look = { layout: 'strip', frame: 'cream', bw: false };
+const picked = new Set();
 
-function pad(n, w) { return String(n).padStart(w || 2, '0'); }
+function pad(n) { return String(n).padStart(2, '0'); }
 
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -350,30 +459,31 @@ function stamp(t) {
 }
 
 function explain(err) {
-	if (!navigator.mediaDevices) return 'No lens here. Camera needs https or localhost.';
+	if (!navigator.mediaDevices) return 'Camera needs https or localhost.';
 	switch (err.name) {
-	case 'NotAllowedError': return 'Lens is blocked. Allow the camera in the address bar and try again.';
-	case 'NotFoundError': return 'No lens found.';
-	case 'NotReadableError': return 'Another app is holding the lens.';
-	default: return err.message || 'Could not open the lens.';
+	case 'NotAllowedError': return 'Camera access was blocked. Allow it in the address bar and try again.';
+	case 'NotFoundError': return 'No camera found.';
+	case 'NotReadableError': return 'Camera is in use by another app.';
+	default: return err.message || 'Could not open the camera.';
 	}
 }
 
-function readout() {
-	const t = delays[step] ? delays[step] + 'S' : 'OFF';
-	lcd.textContent = pad(shots.children.length, 3) + ' T-' + t + ' FL-' + (flashOn ? 'ON' : 'OFF');
+function labels() {
+	posesKey.textContent = poses === 4 ? '4 poses' : '1 pose';
+	timer.textContent = delays[step] ? 'timer ' + delays[step] + 's' : 'timer off';
+	flash.textContent = 'flash ' + (flashOn ? 'on' : 'off');
 }
 
 function press(el, on) {
 	el.setAttribute('aria-pressed', on);
 }
 
-// short message in the viewfinder, since the roll is off screen
+// short message over the video, since the roll is off screen
 function say(text) {
 	msg.textContent = text;
 	clearTimeout(sayTimer);
 	sayTimer = setTimeout(() => {
-		msg.textContent = stream ? '' : 'Lens cap is on.';
+		msg.textContent = stream ? '' : 'Camera is off.';
 	}, 3500);
 }
 
@@ -459,8 +569,7 @@ async function start(id) {
 	const facing = stream.getVideoTracks()[0].getSettings().facingMode;
 	video.classList.toggle('back', facing === 'environment');
 	msg.textContent = '';
-	stage.classList.add('live');
-	press(toggle, true);
+	toggle.textContent = '';
 	snap.disabled = false;
 	listCams();
 }
@@ -471,15 +580,14 @@ function stop() {
 	stream.getTracks().forEach(t => t.stop());
 	stream = null;
 	video.srcObject = null;
-	msg.textContent = 'Lens cap is on.';
-	stage.classList.remove('live');
-	press(toggle, false);
+	msg.textContent = 'Camera is off.';
+	toggle.textContent = '';
 	snap.disabled = true;
 }
 
 /* photos */
 
-// show the fresh print big over the viewfinder, then drop it into the slot
+// show the fresh print big over the video, then drop it into the slot
 async function eject(blob, time) {
 	const sr = stage.getBoundingClientRect();
 	const slotBox = slot.getBoundingClientRect();
@@ -525,34 +633,37 @@ async function eject(blob, time) {
 	}
 }
 
-function take() {
-	if (!stream || !video.videoWidth) return;
-	const c = document.createElement('canvas');
-	c.width = video.videoWidth;
-	c.height = video.videoHeight;
-	c.getContext('2d').drawImage(video, 0, 0);
+// one frame: grab it, save it, hand back the record
+function capture() {
+	return new Promise(resolve => {
+		if (!stream || !video.videoWidth) return resolve(null);
+		const c = document.createElement('canvas');
+		c.width = video.videoWidth;
+		c.height = video.videoHeight;
+		c.getContext('2d').drawImage(video, 0, 0);
 
-	shutterSound();
-	stage.classList.add('blink');
-	setTimeout(() => stage.classList.remove('blink'), 90);
+		shutterSound();
+		stage.classList.add('blink');
+		setTimeout(() => stage.classList.remove('blink'), 90);
 
-	c.toBlob(async blob => {
-		const time = Date.now();
-		let id = null;
-		if (db) {
-			try {
-				id = await run('readwrite', s => s.add({ blob, time }));
-				keepStorage();
-			} catch (e) {
-				say('That one did not develop. Save it before leaving.');
+		c.toBlob(async blob => {
+			const time = Date.now();
+			let id = null;
+			if (db) {
+				try {
+					id = await run('readwrite', s => s.add({ blob, time }));
+					keepStorage();
+				} catch (e) {
+					say('Could not save that photo. Download it before leaving.');
+				}
 			}
-		}
-		await eject(blob, time);
-		add(blob, id, time);
-	}, 'image/jpeg', 0.92);
+			resolve({ blob, id, time });
+		}, 'image/jpeg', 0.92);
+	});
 }
 
-// countdown, optional flash, then take(). calling it again mid-countdown cancels.
+// countdown, optional flash, then a frame. with 4 poses it repeats and
+// opens the collage at the end. pressing the shutter again cancels.
 async function shoot() {
 	if (pending) {
 		cancelled = true;
@@ -566,33 +677,74 @@ async function shoot() {
 		try { audio = new AudioContext(); } catch (e) {}
 	}
 
-	const secs = delays[step];
-	if (secs) led.classList.add('blink');
-	for (let n = secs; n > 0 && !cancelled; n--) {
-		count.textContent = n;
-		await wait(1000);
-	}
-	count.textContent = '';
-	led.classList.remove('blink');
+	const total = poses;
+	const taken = [];
+	const boxes = [];
+	for (let i = 0; i < total && !cancelled; i++) {
+		if (total > 1) tag.textContent = 'pose ' + (i + 1) + '/' + total;
 
-	if (!cancelled && flashOn) {
-		light.classList.add('on');
-		await wait(450);
-	}
-	if (!cancelled) take();
+		const secs = total > 1 ? Math.max(delays[step], 3) : delays[step];
+		for (let n = secs; n > 0 && !cancelled; n--) {
+			count.textContent = n;
+			await wait(1000);
+		}
+		count.textContent = '';
+		if (cancelled) break;
 
-	light.classList.remove('on');
+		if (flashOn) {
+			light.classList.add('on');
+			await wait(450);
+		}
+		const rec = cancelled ? null : await capture();
+		light.classList.remove('on');
+		if (!rec) break;
+		taken.push(rec);
+
+		if (total === 1) {
+			eject(rec.blob, rec.time).catch(() => {}).then(() => add(rec.blob, rec.id, rec.time));
+		} else {
+			boxes.push(add(rec.blob, rec.id, rec.time));
+			await wait(500);
+		}
+	}
+
+	tag.textContent = '';
 	pending = false;
+
+	if (total > 1 && taken.length > 1 && !cancelled) {
+		pick(boxes);
+		await wait(400);
+		openLab(taken.map(r => r.blob));
+	}
 }
 
 function add(blob, id, time) {
 	const url = URL.createObjectURL(blob);
 	const box = document.createElement('div');
 	box.className = 'shot';
+	box.rec = { blob, time };
 
 	const img = document.createElement('img');
 	img.src = url;
 	img.alt = 'photo';
+	img.title = 'Pick for a collage';
+	img.tabIndex = 0;
+	img.onclick = () => {
+		if (picked.has(box)) {
+			picked.delete(box);
+			box.classList.remove('picked');
+		} else if (picked.size >= 8) {
+			note.textContent = 'A collage holds up to 8 prints.';
+			return;
+		} else {
+			picked.add(box);
+			box.classList.add('picked');
+		}
+		syncPicks();
+	};
+	img.onkeydown = e => {
+		if (e.key === 'Enter') img.click();
+	};
 
 	const row = document.createElement('div');
 	const dl = document.createElement('a');
@@ -611,14 +763,15 @@ function add(blob, id, time) {
 			}
 		}
 		URL.revokeObjectURL(url);
+		picked.delete(box);
 		box.remove();
-		readout();
+		syncPicks();
 	};
 
 	row.append(dl, rm);
 	box.append(img, row);
 	shots.prepend(box);
-	readout();
+	return box;
 }
 
 async function wipeAll() {
@@ -633,23 +786,160 @@ async function wipeAll() {
 	}
 	shots.querySelectorAll('img').forEach(i => URL.revokeObjectURL(i.src));
 	shots.innerHTML = '';
-	readout();
+	picked.clear();
+	syncPicks();
 }
+
+/* picking prints */
+
+function syncPicks() {
+	make.hidden = picked.size < 2;
+	make.textContent = 'collage (' + picked.size + ')';
+}
+
+function pick(boxes) {
+	picked.forEach(b => b.classList.remove('picked'));
+	picked.clear();
+	boxes.forEach(b => {
+		picked.add(b);
+		b.classList.add('picked');
+	});
+	syncPicks();
+}
+
+/* collage */
+
+function drawSheet() {
+	const n = bmps.length;
+	const f = frames[look.frame];
+	const strip = look.layout === 'strip';
+	const cols = strip ? 1 : (n <= 3 ? n : n === 4 ? 2 : 3);
+	const rows = Math.ceil(n / cols);
+	const edge = 40, gap = 24, foot = 120;
+	const cw = strip ? 540 : 420;
+	const ch = cw * 3 / 4;
+
+	const w = edge * 2 + cols * cw + (cols - 1) * gap;
+	const bottom = edge + rows * ch + (rows - 1) * gap;
+	sheet.width = w;
+	sheet.height = bottom + foot + edge;
+
+	const g = sheet.getContext('2d');
+	g.fillStyle = f.bg;
+	g.fillRect(0, 0, w, sheet.height);
+
+	g.filter = look.bw ? 'grayscale(1) contrast(1.1)' : 'none';
+	bmps.forEach((b, i) => {
+		const r = Math.floor(i / cols);
+		const inRow = Math.min(cols, n - r * cols);
+		const x = edge + (i % cols) * (cw + gap) + (cols - inRow) * (cw + gap) / 2;
+		const y = edge + r * (ch + gap);
+
+		// crop to 4:3 from the middle
+		let sw = b.width, sh = b.height, sx = 0, sy = 0;
+		if (b.width / b.height > cw / ch) {
+			sw = b.height * cw / ch;
+			sx = (b.width - sw) / 2;
+		} else {
+			sh = b.width * ch / cw;
+			sy = (b.height - sh) / 2;
+		}
+		g.drawImage(b, sx, sy, sw, sh, x, y, cw, ch);
+	});
+	g.filter = 'none';
+
+	g.fillStyle = f.fg;
+	g.textAlign = 'center';
+	g.font = 'italic 700 42px Georgia, serif';
+	g.fillText('klik photo booth', w / 2, bottom + 70);
+	g.font = '22px system-ui, sans-serif';
+	g.fillText(new Date().toLocaleDateString([], { dateStyle: 'long' }), w / 2, bottom + 106);
+}
+
+function paint() {
+	document.querySelectorAll('[data-layout]').forEach(b => press(b, b.dataset.layout === look.layout));
+	swatches.querySelectorAll('button').forEach(b => press(b, b.dataset.frame === look.frame));
+	press(bwKey, look.bw);
+	drawSheet();
+
+	get.download = (look.layout === 'strip' ? 'strip-' : 'collage-') + stamp(Date.now()) + '.jpg';
+	sheet.toBlob(b => {
+		if (sheetUrl) URL.revokeObjectURL(sheetUrl);
+		sheetUrl = URL.createObjectURL(b);
+		get.href = sheetUrl;
+	}, 'image/jpeg', 0.92);
+}
+
+async function openLab(blobs) {
+	bmps.forEach(b => b.close());
+	bmps = await Promise.all(blobs.map(b => createImageBitmap(b)));
+	paint();
+	if (!lab.open) lab.showModal();
+}
+
+lab.onclose = () => {
+	bmps.forEach(b => b.close());
+	bmps = [];
+	if (sheetUrl) URL.revokeObjectURL(sheetUrl);
+	sheetUrl = '';
+};
+lab.onclick = e => {
+	if (e.target === lab) lab.close();
+};
+document.getElementById('shut').onclick = () => lab.close();
+
+document.querySelectorAll('[data-layout]').forEach(b => {
+	b.onclick = () => {
+		look.layout = b.dataset.layout;
+		paint();
+	};
+});
+
+Object.keys(frames).forEach(k => {
+	const b = document.createElement('button');
+	b.className = 'swatch';
+	b.dataset.frame = k;
+	b.title = k;
+	b.setAttribute('aria-label', k + ' frame');
+	b.style.background = frames[k].bg;
+	b.onclick = () => {
+		look.frame = k;
+		paint();
+	};
+	swatches.append(b);
+});
+
+if (!('filter' in CanvasRenderingContext2D.prototype)) bwKey.hidden = true;
+bwKey.onclick = () => {
+	look.bw = !look.bw;
+	paint();
+};
+
+make.onclick = () => {
+	const list = [...picked].sort((a, b) => a.rec.time - b.rec.time);
+	openLab(list.map(b => b.rec.blob));
+};
+
+/* wiring */
 
 toggle.onclick = () => (stream ? stop() : start());
 snap.onclick = shoot;
 wipe.onclick = wipeAll;
 addEventListener('pagehide', stop);
 
+posesKey.onclick = () => {
+	poses = poses === 4 ? 1 : 4;
+	labels();
+};
+
 timer.onclick = () => {
 	step = (step + 1) % delays.length;
-	readout();
+	labels();
 };
 
 flash.onclick = () => {
 	flashOn = !flashOn;
-	press(flash, flashOn);
-	readout();
+	labels();
 };
 
 flip.onclick = () => {
@@ -676,17 +966,17 @@ try {
 	if (modes.includes(saved)) mode = saved;
 } catch (e) {}
 applyTheme();
-readout();
+labels();
 
 (async () => {
 	try {
 		db = await openDb();
 		const saved = await run('readonly', s => s.getAll());
 		saved.forEach(p => add(p.blob, p.id, p.time));
-		note.textContent = 'The film stays in this browser. Nothing is uploaded.';
+		note.textContent = 'The film stays in this browser. Nothing is uploaded. Tap prints to pick them for a collage.';
 	} catch (e) {
 		db = null;
-		note.textContent = 'No film in this camera (storage blocked, private window?). Shots last until you close the tab.';
+		note.textContent = 'No film in this booth (storage blocked, private window?). Shots last until you close the tab.';
 	}
 })();
 </script>
