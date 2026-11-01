@@ -25,20 +25,27 @@
 	}
 }
 * { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
 	margin: 0;
-	padding: 2rem 1rem 4rem;
 	background: var(--bg);
 	color: var(--fg);
 	font: 16px/1.5 system-ui, sans-serif;
 }
 button { font: inherit; cursor: pointer; }
-button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
-/* the camera */
+/* first screen: just the camera */
+#top {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem 1rem 2rem;
+}
 #cam {
-	max-width: 40rem;
-	margin: 0 auto;
+	width: max(18rem, min(100%, 80rem, calc((100vh - 17rem) * 1.7778 + 2rem)));
 	padding: 0 1rem 1rem;
 	background: #1b1b1b;
 	border-radius: 1.1rem;
@@ -123,7 +130,7 @@ video.back { transform: none; }
 #msg { color: #8d8d88; font-style: italic; }
 #count {
 	color: #fff;
-	font-size: 6rem;
+	font-size: clamp(5rem, 14vh, 9rem);
 	text-shadow: 0 0 12px rgba(0, 0, 0, .6);
 	pointer-events: none;
 }
@@ -150,39 +157,85 @@ video.back { transform: none; }
 .key[aria-pressed="true"] { color: #ffd38a; }
 #snap {
 	margin-left: auto;
-	width: 4.2rem;
-	height: 4.2rem;
+	width: 4.6rem;
+	height: 4.6rem;
 	background: var(--red);
-	border: .35rem solid #dcdcd8;
+	border: .38rem solid #dcdcd8;
 	border-radius: 50%;
 	box-shadow: 0 4px 0 #0b0b0b;
 }
 #snap:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #0b0b0b; }
 #snap:disabled { background: #6b3430; cursor: default; }
 
-/* under the camera */
-#foot {
+#slot {
+	height: .6rem;
+	margin-top: 1.2rem;
+	background: #040404;
+	border-radius: .3rem;
+	box-shadow: inset 0 2px 3px #000, 0 1px 0 rgba(255, 255, 255, .12);
+}
+
+#more {
+	margin-top: 1.25rem;
+	color: var(--dim);
+	font-size: .875rem;
+	text-decoration: none;
+}
+#more:hover { color: var(--fg); }
+
+/* the print that drops into the slot */
+#drop {
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 0;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 5;
+}
+.print {
+	position: absolute;
+	padding: .7rem .7rem 0;
+	background: #f4f2ec;
+	box-shadow: 0 .8rem 2.4rem rgba(0, 0, 0, .55);
+	transform-origin: 50% 0;
+}
+.print img { width: 100%; display: block; }
+.print span {
+	display: block;
+	padding: .7rem 0 .8rem;
+	color: #444;
+	font: italic 1rem Georgia, serif;
+}
+
+/* the roll, below the fold */
+#roll {
+	max-width: 72rem;
+	margin: 0 auto;
+	padding: 3rem 1rem 5rem;
+}
+.head {
 	display: flex;
-	gap: 1rem;
-	justify-content: center;
-	margin-top: 1.5rem;
+	justify-content: space-between;
+	align-items: baseline;
 	font-size: .875rem;
 }
-#foot button, .shot button, .shot a {
+.head h2 { margin: 0; font: italic 700 1.4rem Georgia, serif; }
+.head div { display: flex; gap: 1rem; }
+.head button, .shot button, .shot a {
 	padding: 0;
 	background: none;
 	border: 0;
 	color: var(--dim);
 	text-decoration: underline;
 }
-#note { margin: .25rem 0 0; text-align: center; color: var(--dim); font-size: .875rem; min-height: 1.5em; }
+#note { margin: .25rem 0 1.5rem; color: var(--dim); font-size: .875rem; min-height: 1.5em; }
 
 #shots {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-	gap: 1.5rem 1rem;
-	max-width: 56rem;
-	margin: 2rem auto 0;
+	grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+	gap: 1.75rem 1.25rem;
 }
 .shot {
 	padding: .5rem .5rem .4rem;
@@ -209,37 +262,47 @@ video.back { transform: none; }
 </head>
 <body>
 <div id="light"></div>
+<div id="drop"></div>
 
-<div id="cam">
-	<div id="plate">
-		<span class="brand">klik</span>
-		<span class="model">400</span>
-		<span id="lcd"></span>
-		<span id="led"></span>
+<section id="top">
+	<div id="cam">
+		<div id="plate">
+			<span class="brand">klik</span>
+			<span class="model">400</span>
+			<span id="lcd"></span>
+			<span id="led"></span>
+		</div>
+
+		<div id="stage">
+			<video id="video" autoplay playsinline muted></video>
+			<div id="msg">Lens cap is on.</div>
+			<div id="count"></div>
+		</div>
+
+		<div id="ctrl">
+			<button class="key" id="toggle" aria-pressed="false">Power</button>
+			<button class="key" id="timer">Timer</button>
+			<button class="key" id="flash" aria-pressed="false">Flash</button>
+			<button class="key" id="flip" hidden>Flip</button>
+			<button id="snap" title="Shutter (space)" aria-label="Shutter" disabled></button>
+		</div>
+
+		<div id="slot"></div>
 	</div>
+	<a id="more" href="#roll">the roll &darr;</a>
+</section>
 
-	<div id="stage">
-		<video id="video" autoplay playsinline muted></video>
-		<div id="msg">Lens cap is on.</div>
-		<div id="count"></div>
+<section id="roll">
+	<div class="head">
+		<h2>the roll</h2>
+		<div>
+			<button id="theme">desk: auto</button>
+			<button id="wipe">toss the roll</button>
+		</div>
 	</div>
-
-	<div id="ctrl">
-		<button class="key" id="toggle" aria-pressed="false">Power</button>
-		<button class="key" id="timer">Timer</button>
-		<button class="key" id="flash" aria-pressed="false">Flash</button>
-		<button class="key" id="flip" hidden>Flip</button>
-		<button id="snap" title="Shutter (space)" aria-label="Shutter" disabled></button>
-	</div>
-</div>
-
-<div id="foot">
-	<button id="theme">desk: auto</button>
-	<button id="wipe">toss the roll</button>
-</div>
-<p id="note"></p>
-
-<div id="shots"></div>
+	<p id="note"></p>
+	<div id="shots"></div>
+</section>
 
 <script>
 const video = document.getElementById('video');
@@ -247,6 +310,8 @@ const stage = document.getElementById('stage');
 const msg = document.getElementById('msg');
 const count = document.getElementById('count');
 const light = document.getElementById('light');
+const drop = document.getElementById('drop');
+const slot = document.getElementById('slot');
 const lcd = document.getElementById('lcd');
 const led = document.getElementById('led');
 const note = document.getElementById('note');
@@ -272,6 +337,7 @@ let pending = false;
 let cancelled = false;
 let mode = 'auto';
 let audio = null;
+let sayTimer = 0;
 
 function pad(n, w) { return String(n).padStart(w || 2, '0'); }
 
@@ -300,6 +366,15 @@ function readout() {
 
 function press(el, on) {
 	el.setAttribute('aria-pressed', on);
+}
+
+// short message in the viewfinder, since the roll is off screen
+function say(text) {
+	msg.textContent = text;
+	clearTimeout(sayTimer);
+	sayTimer = setTimeout(() => {
+		msg.textContent = stream ? '' : 'Lens cap is on.';
+	}, 3500);
 }
 
 /* desk theme */
@@ -404,6 +479,52 @@ function stop() {
 
 /* photos */
 
+// show the fresh print big over the viewfinder, then drop it into the slot
+async function eject(blob, time) {
+	const sr = stage.getBoundingClientRect();
+	const slotBox = slot.getBoundingClientRect();
+	const offscreen = sr.bottom < 0 || sr.top > innerHeight;
+	if (offscreen || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+	const cut = slotBox.top + slotBox.height / 2;
+	drop.style.height = cut + 'px';
+
+	const url = URL.createObjectURL(blob);
+	const p = document.createElement('div');
+	p.className = 'print';
+	const img = document.createElement('img');
+	img.src = url;
+	img.alt = '';
+	const cap = document.createElement('span');
+	cap.textContent = new Date(time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+	p.append(img, cap);
+
+	const w = Math.min(sr.width * 0.62, 720);
+	p.style.width = w + 'px';
+	p.style.left = sr.left + (sr.width - w) / 2 + 'px';
+	try { await img.decode(); } catch (e) {}
+	drop.append(p);
+
+	const top = Math.max(8, sr.top + (sr.height - p.offsetHeight) / 2);
+	p.style.top = top + 'px';
+	const fall = cut - top + 4;
+
+	try {
+		await p.animate([
+			{ opacity: 0, transform: 'translateY(-14px) rotate(-3deg) scale(.92)' },
+			{ opacity: 1, transform: 'translateY(0px) rotate(-1.5deg) scale(1)' }
+		], { duration: 220, easing: 'ease-out', fill: 'forwards' }).finished;
+		await wait(1100);
+		await p.animate([
+			{ transform: 'translateY(0px) rotate(-1.5deg) scale(1)' },
+			{ transform: 'translateY(' + fall + 'px) rotate(0deg) scale(.4)' }
+		], { duration: 650, easing: 'ease-in', fill: 'forwards' }).finished;
+	} finally {
+		p.remove();
+		URL.revokeObjectURL(url);
+	}
+}
+
 function take() {
 	if (!stream || !video.videoWidth) return;
 	const c = document.createElement('canvas');
@@ -423,9 +544,10 @@ function take() {
 				id = await run('readwrite', s => s.add({ blob, time }));
 				keepStorage();
 			} catch (e) {
-				note.textContent = 'That one did not develop. Save it before leaving.';
+				say('That one did not develop. Save it before leaving.');
 			}
 		}
+		await eject(blob, time);
 		add(blob, id, time);
 	}, 'image/jpeg', 0.92);
 }
