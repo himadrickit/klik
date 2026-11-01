@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>camera</title>
+<style>
+:root {
+	--bg: #f2f2f0;
+	--fg: #1a1a1a;
+	--dim: #777;
+	--line: #cfcfcb;
+	--accent: #2b5fd9;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #16181a;
+		--fg: #e4e4e0;
+		--dim: #8a8d90;
+		--line: #34383b;
+		--accent: #7ba4ff;
+	}
+}
+* { box-sizing: border-box; }
+body {
+	margin: 0;
+	padding: 1.5rem 1rem 4rem;
+	background: var(--bg);
+	color: var(--fg);
+	font: 16px/1.5 system-ui, sans-serif;
+}
+main { max-width: 56rem; margin: 0 auto; }
+h1 { font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem; }
+
+#stage {
+	position: relative;
+	aspect-ratio: 16 / 9;
+	background: #000;
+	border: 1px solid var(--line);
+}
+video {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	display: block;
+	transform: scaleX(-1);
+}
+video.back { transform: none; }
+#msg {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+	text-align: center;
+	color: #bbb;
+}
+#msg:empty { display: none; }
+
+.bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+	margin: .75rem 0 .5rem;
+}
+button, select {
+	font: inherit;
+	color: inherit;
+	background: transparent;
+	border: 1px solid var(--line);
+	padding: .35rem .8rem;
+	border-radius: 3px;
+	cursor: pointer;
+}
+button:hover:not(:disabled), select:hover { border-color: var(--fg); }
+button:disabled { opacity: .4; cursor: default; }
+button:focus-visible, select:focus-visible, a:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+#snap { border-color: var(--accent); color: var(--accent); }
+#snap:hover:not(:disabled) { border-color: var(--accent); }
+#wipe { margin-left: auto; }
+#note { color: var(--dim); font-size: .875rem; margin: 0 0 2rem; min-height: 1.5em; }
+
+#shots {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+	gap: 1rem;
+}
+.shot img { width: 100%; display: block; border: 1px solid var(--line); }
+.shot div { display: flex; gap: 1rem; margin-top: .25rem; font-size: .875rem; }
+.shot a, .shot button {
+	color: var(--accent);
+	background: none;
+	border: 0;
+	padding: 0;
+	text-decoration: underline;
+	cursor: pointer;
+}
+.shot button { font-size: inherit; }
+</style>
+</head>
+<body>
+<main>
+	<h1>camera</h1>
+
+	<div id="stage">
+		<video id="video" autoplay playsinline muted></video>
+		<div id="msg">Camera is off.</div>
+	</div>
+
+	<div class="bar">
+		<button id="toggle">Start camera</button>
+		<select id="cams" hidden></select>
+		<button id="snap" disabled>Take photo</button>
+		<button id="wipe">Delete all</button>
+	</div>
+	<p id="note"></p>
+
+	<div id="shots"></div>
+</main>
+
+<script>
+const video = document.getElementById('video');
+const msg = document.getElementById('msg');
+const note = document.getElementById('note');
+const toggle = document.getElementById('toggle');
+const snap = document.getElementById('snap');
+const wipe = document.getElementById('wipe');
+const cams = document.getElementById('cams');
+const shots = document.getElementById('shots');
+
+let stream = null;
+let db = null;
+let asked = false;
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function stamp(t) {
+	const d = new Date(t);
+	return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) +
+		'-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+}
+
+function explain(err) {
+	if (!navigator.mediaDevices) return 'Camera needs https or localhost.';
+	switch (err.name) {
+	case 'NotAllowedError': return 'Camera access was blocked. Allow it in the address bar and try again.';
+	case 'NotFoundError': return 'No camera found.';
+	case 'NotReadableError': return 'Camera is in use by another app.';
+	default: return err.message || 'Could not open the camera.';
+	}
+}
+
+/* storage */
+
+function openDb() {
+	return new Promise((ok, fail) => {
+		if (!window.indexedDB) return fail(new Error('no indexedDB'));
+		const req = indexedDB.open('camera', 1);
+		req.onupgradeneeded = () => {
+			req.result.createObjectStore('photos', { keyPath: 'id', autoIncrement: true });
+		};
+		req.onsuccess = () => ok(req.result);
+		req.onerror = () => fail(req.error);
+	});
+}
+
+function run(mode, fn) {
+	return new Promise((ok, fail) => {
+		const t = db.transaction('photos', mode);
+		const r = fn(t.objectStore('photos'));
+		t.oncomplete = () => ok(r.result);
+		t.onerror = () => fail(t.error);
+		t.onabort = () => fail(t.error);
+	});
+}
+
+// ask the browser not to evict our data, once, after the first save
+function keepStorage() {
+	if (asked || !navigator.storage || !navigator.storage.persist) return;
+	asked = true;
+	navigator.storage.persist();
+}
+
+/* camera */
+
+async function listCams() {
+	const all = await navigator.mediaDevices.enumerateDevices();
+	const list = all.filter(d => d.kind === 'videoinput');
+	cams.innerHTML = '';
+	list.forEach((c, i) => {
+		const o = document.createElement('option');
+		o.value = c.deviceId;
+		o.textContent = c.label || 'camera ' + (i + 1);
+		cams.appendChild(o);
+	});
+	const cur = stream && stream.getVideoTracks()[0].getSettings().deviceId;
+	if (cur) cams.value = cur;
+	cams.hidden = list.length < 2;
+}
+
+async function start(id) {
+	stop();
+	const want = id
+		? { deviceId: { exact: id } }
+		: { width: { ideal: 1920 }, height: { ideal: 1080 } };
+	try {
+		stream = await navigator.mediaDevices.getUserMedia({ video: want, audio: false });
+	} catch (err) {
+		msg.textContent = explain(err);
+		return;
+	}
+	video.srcObject = stream;
+	const facing = stream.getVideoTracks()[0].getSettings().facingMode;
+	video.classList.toggle('back', facing === 'environment');
+	msg.textContent = '';
+	toggle.textContent = 'Stop camera';
+	snap.disabled = false;
+	listCams();
+}
+
+function stop() {
+	if (!stream) return;
+	stream.getTracks().forEach(t => t.stop());
+	stream = null;
+	video.srcObject = null;
+	msg.textContent = 'Camera is off.';
+	toggle.textContent = 'Start camera';
+	snap.disabled = true;
+}
+
+/* photos */
+
+function take() {
+	if (!stream || !video.videoWidth) return;
+	const c = document.createElement('canvas');
+	c.width = video.videoWidth;
+	c.height = video.videoHeight;
+	c.getContext('2d').drawImage(video, 0, 0);
+	c.toBlob(async blob => {
+		const time = Date.now();
+		let id = null;
+		if (db) {
+			try {
+				id = await run('readwrite', s => s.add({ blob, time }));
+				keepStorage();
+			} catch (e) {
+				note.textContent = 'Could not save that photo. Download it before leaving.';
+			}
+		}
+		add(blob, id, time);
+	}, 'image/jpeg', 0.92);
+}
+
+function add(blob, id, time) {
+	const url = URL.createObjectURL(blob);
+	const box = document.createElement('div');
+	box.className = 'shot';
+
+	const img = document.createElement('img');
+	img.src = url;
+	img.alt = 'photo';
+
+	const row = document.createElement('div');
+	const dl = document.createElement('a');
+	dl.href = url;
+	dl.download = 'photo-' + stamp(time) + '.jpg';
+	dl.textContent = 'Download';
+	const rm = document.createElement('button');
+	rm.textContent = 'Delete';
+	rm.onclick = async () => {
+		if (id !== null && db) {
+			try {
+				await run('readwrite', s => s.delete(id));
+			} catch (e) {
+				note.textContent = 'Could not delete that photo.';
+				return;
+			}
+		}
+		URL.revokeObjectURL(url);
+		box.remove();
+	};
+
+	row.append(dl, rm);
+	box.append(img, row);
+	shots.prepend(box);
+}
+
+async function wipeAll() {
+	if (!shots.children.length || !confirm('Delete all photos?')) return;
+	if (db) {
+		try {
+			await run('readwrite', s => s.clear());
+		} catch (e) {
+			note.textContent = 'Could not clear storage.';
+			return;
+		}
+	}
+	shots.querySelectorAll('img').forEach(i => URL.revokeObjectURL(i.src));
+	shots.innerHTML = '';
+}
+
+toggle.onclick = () => (stream ? stop() : start());
+snap.onclick = take;
+wipe.onclick = wipeAll;
+cams.onchange = () => start(cams.value);
+addEventListener('pagehide', stop);
+
+document.addEventListener('keydown', e => {
+	if (e.code === 'Space' && e.target === document.body) {
+		e.preventDefault();
+		take();
+	}
+});
+
+(async () => {
+	try {
+		db = await openDb();
+		const saved = await run('readonly', s => s.getAll());
+		saved.forEach(p => add(p.blob, p.id, p.time));
+		note.textContent = 'Photos are saved in this browser only.';
+	} catch (e) {
+		db = null;
+		note.textContent = 'Storage is unavailable (private window?). Photos last until you close this tab.';
+	}
+})();
+</script>
+</body>
+</html>
