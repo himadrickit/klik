@@ -13,6 +13,11 @@
 	--dim: #7a7160;
 	--line: #c5b99d;
 	--red: #cc3a2b;
+	--ar: 1.7778;
+	--vh: 100vh;
+}
+@supports (height: 100dvh) {
+	:root { --vh: 100dvh; }
 }
 :root[data-theme="dark"] {
 	--bg: #221e18;
@@ -47,12 +52,12 @@ body {
 	pointer-events: none;
 	mix-blend-mode: multiply;
 }
-button { font: inherit; cursor: pointer; }
+button { font: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 button:focus-visible, a:focus-visible, img:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
 /* first screen: just the camera */
 #top {
-	min-height: 100vh;
+	min-height: var(--vh);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -60,7 +65,7 @@ button:focus-visible, a:focus-visible, img:focus-visible { outline: 2px solid va
 	padding: 1rem 1rem 2rem;
 }
 #cam {
-	width: max(18rem, min(100%, 80rem, calc((100vh - 14.5rem) * 1.7778 + 1.6rem)));
+	width: max(18rem, min(100%, 80rem, calc((var(--vh) - 14.5rem) * var(--ar) + 1.6rem)));
 	font-family: Georgia, 'Iowan Old Style', serif;
 }
 #frame {
@@ -83,7 +88,7 @@ button:focus-visible, a:focus-visible, img:focus-visible { outline: 2px solid va
 
 #stage {
 	position: relative;
-	aspect-ratio: 16 / 9;
+	aspect-ratio: var(--ar);
 	background: #000;
 	overflow: hidden;
 }
@@ -108,7 +113,7 @@ video.back { transform: none; }
 #msg { color: #8d8d88; pointer-events: none; }
 #count {
 	color: #fff;
-	font-size: clamp(5rem, 14vh, 9rem);
+	font-size: clamp(4rem, 14vmin, 9rem);
 	text-shadow: 0 0 12px rgba(0, 0, 0, .6);
 	pointer-events: none;
 }
@@ -128,8 +133,10 @@ video.back { transform: none; }
 	position: absolute;
 	top: .6rem;
 	left: .6rem;
+	right: .6rem;
 	z-index: 2;
 	display: flex;
+	flex-wrap: wrap;
 	gap: .4rem;
 }
 .opt {
@@ -152,7 +159,8 @@ video.back { transform: none; }
 	margin-top: 1rem;
 }
 #snap { grid-column: 2; }
-#toggle { height: 18px; width: 18px; border-radius: 100%; background: #62271e; border: 0 ; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .1), 0 0 0 3.2px var(--bg), 0 0 0 4.7px ##6d675c ; padding: 1px; grid-column: 3; justify-self: start; margin-left: .5rem; }
+#toggle { height: 18px; width: 18px; border-radius: 100%; background: #62271e; border: 0 ; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .1), 0 0 0 3.2px var(--bg), 0 0 0 4.7px #6d675c; padding: 1px; position: relative; grid-column: 3; justify-self: start; margin-left: .5rem; }
+#toggle::after { content: ""; position: absolute; inset: -12px; }
 .key {
 	padding: .35rem .8rem;
 	background: transparent;
@@ -189,6 +197,20 @@ a.key { display: inline-block; text-decoration: none; }
 	text-decoration: none;
 }
 #more:hover { color: var(--fg); }
+
+/* phones and rotation */
+@media (hover: none) and (pointer: coarse) {
+	.opt { padding: .4rem .7rem; font-size: .85rem; }
+	#grain { display: none; }
+}
+@media (orientation: landscape) and (max-height: 32rem) {
+	#top { padding-top: .75rem; padding-bottom: .75rem; }
+	#cam { display: flex; align-items: center; justify-content: center; gap: 1.25rem; width: 100%; max-width: 80rem; }
+	#frame { flex: 0 1 auto; width: calc((var(--vh) - 5rem) * var(--ar) + 1.6rem); max-width: calc(100% - 7rem); }
+	#ctrl { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; margin: 0; }
+	#slot { display: none; }
+	#more { margin-top: .5rem; }
+}
 
 /* the print that drops into the slot */
 #drop {
@@ -354,7 +376,7 @@ a.key { display: inline-block; text-decoration: none; }
 
 		<div id="ctrl">
 			<button id="snap" title="Shutter (space)" aria-label="Shutter" disabled></button>
-			<button class="key" id="toggle"></button>
+			<button class="key" id="toggle" aria-label="Start camera" title="Start camera"></button>
 		</div>
 
 		<div id="slot"></div>
@@ -474,6 +496,12 @@ function labels() {
 	flash.textContent = 'flash ' + (flashOn ? 'on' : 'off');
 }
 
+// the start button has no text, so keep its label for screen readers and hover
+function labelToggle(text) {
+	toggle.title = text;
+	toggle.setAttribute('aria-label', text);
+}
+
 function press(el, on) {
 	el.setAttribute('aria-pressed', on);
 }
@@ -548,6 +576,13 @@ function keepStorage() {
 
 /* camera */
 
+// the stage takes the shape of whatever the camera sends, so turning the phone just works
+function shape() {
+	let ar = matchMedia('(orientation: portrait)').matches ? 3 / 4 : 16 / 9;
+	if (stream && video.videoWidth) ar = video.videoWidth / video.videoHeight;
+	document.documentElement.style.setProperty('--ar', ar.toFixed(4));
+}
+
 async function listCams() {
 	const all = await navigator.mediaDevices.enumerateDevices();
 	ids = all.filter(d => d.kind === 'videoinput').map(d => d.deviceId);
@@ -570,6 +605,7 @@ async function start(id) {
 	video.classList.toggle('back', facing === 'environment');
 	msg.textContent = '';
 	toggle.textContent = '';
+	labelToggle('Stop camera');
 	snap.disabled = false;
 	listCams();
 }
@@ -580,8 +616,10 @@ function stop() {
 	stream.getTracks().forEach(t => t.stop());
 	stream = null;
 	video.srcObject = null;
+	shape();
 	msg.textContent = 'Camera is off.';
 	toggle.textContent = '';
+	labelToggle('Start camera');
 	snap.disabled = true;
 }
 
@@ -592,7 +630,7 @@ async function eject(blob, time) {
 	const sr = stage.getBoundingClientRect();
 	const slotBox = slot.getBoundingClientRect();
 	const offscreen = sr.bottom < 0 || sr.top > innerHeight;
-	if (offscreen || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+	if (offscreen || !slot.offsetParent || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
 	const cut = slotBox.top + slotBox.height / 2;
 	drop.style.height = cut + 'px';
@@ -816,8 +854,9 @@ function drawSheet() {
 	const cols = strip ? 1 : (n <= 3 ? n : n === 4 ? 2 : 3);
 	const rows = Math.ceil(n / cols);
 	const edge = 40, gap = 24, foot = 120;
-	const cw = strip ? 540 : 420;
-	const ch = cw * 3 / 4;
+	const tall = bmps.filter(b => b.height > b.width).length > n / 2;
+	const cw = strip ? (tall ? 400 : 540) : (tall ? 340 : 420);
+	const ch = tall ? cw * 4 / 3 : cw * 3 / 4;
 
 	const w = edge * 2 + cols * cw + (cols - 1) * gap;
 	const bottom = edge + rows * ch + (rows - 1) * gap;
@@ -926,6 +965,10 @@ toggle.onclick = () => (stream ? stop() : start());
 snap.onclick = shoot;
 wipe.onclick = wipeAll;
 addEventListener('pagehide', stop);
+video.addEventListener('loadedmetadata', shape);
+video.addEventListener('resize', shape);
+matchMedia('(orientation: portrait)').addEventListener('change', shape);
+shape();
 
 posesKey.onclick = () => {
 	poses = poses === 1 ? 4 : 1;
